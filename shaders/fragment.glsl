@@ -51,8 +51,17 @@ void main() {
         discard;
     vec3 color = base.rgb;
 
-    // Ambiente: exterior e paredes recebem 100%; sala depende da porta
-    float ambientFactor = (isExterior || isBoundary) ? 1.0 : doorOpen;
+    vec3 norm = normalize(Normal);
+    
+    // Ambiente: exterior recebe 100%; sala depende da porta
+    float ambientFactor;
+    if (isBoundary) {
+        // A porta gira de Z+ (fechada) para X+ (aberta). 
+        // A face externa aponta para Z+ ou X+, a interna aponta para Z- ou X-.
+        ambientFactor = (norm.z > 0.1 || norm.x > 0.1) ? 1.0 : doorOpen;
+    } else {
+        ambientFactor = isExterior ? 1.0 : doorOpen;
+    }
     vec3 ambient = ambientOn ? ambientStrength * ambientFactor * color : vec3(0.0);
 
     // Céu: só luz ambiente
@@ -61,14 +70,13 @@ void main() {
         return;
     }
 
-    vec3 norm = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
 
     vec3 diffuse = vec3(0.0);
     vec3 specular = vec3(0.0);
 
     for (int i = 0; i < NUM_LIGHTS; i++) {
-        // Boundary recebe luz de ambos os ambientes; demais só do seu escopo
+        // Boundary (porta) recebe luz de ambos os ambientes; demais só do seu escopo
         if (!lights[i].enabled || (!isBoundary && lights[i].isExterior != isExterior))
             continue;
 
@@ -77,9 +85,9 @@ void main() {
         // Difusa (Lambert)
         float diff = max(dot(norm, lightDir), 0.0);
 
-        // Especular (Phong)
-        vec3 reflectDir = reflect(-lightDir, norm);
-        float spec = pow(max(dot(viewDir, reflectDir), 0.0), matShininess);
+        // Especular (Blinn-Phong)
+        vec3 halfwayDir = normalize(lightDir + viewDir);
+        float spec = pow(max(dot(norm, halfwayDir), 0.0), matShininess);
 
         // Atenuação
         float dist = length(lights[i].position - FragPos);

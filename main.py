@@ -74,13 +74,13 @@ def scene_input(window, state, dt):
     if held(glfw.KEY_5): state.door_angle = max(0.0, state.door_angle - 1.5 * dt)
     if held(glfw.KEY_6): state.door_angle = min(1.5708, state.door_angle + 1.5 * dt)
 
-    adj = 0.6 * dt
+    adj = 1.0 * dt
     if held(glfw.KEY_U): state.ambient = max(0.0, state.ambient - adj)
     if held(glfw.KEY_I): state.ambient = min(1.0, state.ambient + adj)
     if held(glfw.KEY_O): state.diffuse = max(0.0, state.diffuse - adj)
-    if held(glfw.KEY_P): state.diffuse = min(3.0, state.diffuse + adj)
-    if held(glfw.KEY_N): state.specular = max(0.0, state.specular - adj)
-    if held(glfw.KEY_M): state.specular = min(3.0, state.specular + adj)
+    if held(glfw.KEY_P): state.diffuse = min(5.0, state.diffuse + adj)
+    if held(glfw.KEY_N): state.specular = max(0.0, state.specular - adj * 2)
+    if held(glfw.KEY_M): state.specular = min(10.0, state.specular + adj * 2)
 
 
 # ── Luzes ───────────────────────────────────────────────────────────
@@ -110,7 +110,7 @@ PHONE_COLOR = glm.vec3(0.35, 0.5, 1.0)
 
 def build_scene():
     white = glm.vec4(0.85, 0.85, 0.85, 1.0)
-    roof = glm.vec4(0.8, 0.8, 0.8, 1.0)
+    roof = glm.vec4(0.95, 0.95, 0.95, 1.0) # Mais claro que antes
     cube = model("primitivas", "cubo.obj")
     plane = model("primitivas", "plano.obj")
     sphere = model("primitivas", "esfera.obj")
@@ -121,37 +121,56 @@ def build_scene():
     s["floor_indoor"] = GameObject(plane, model("chao_interno", "chao_interno.jpg"))
     s["floor_indoor"].pos = glm.vec3(0, 0.0, -8.0)
     s["floor_indoor"].scale = glm.vec3(8.0, 1.0, 7.0)
-    s["floor_indoor"].kd, s["floor_indoor"].ks, s["floor_indoor"].shininess = 0.9, 0.08, 16.0
+    s["floor_indoor"].kd, s["floor_indoor"].ks, s["floor_indoor"].shininess = 0.9, 0.6, 64.0
     s["floor_indoor"].tex_scale = 4.0
 
-    # Teto
-    s["ceiling"] = GameObject(cube, color=roof)
-    s["ceiling"].pos = glm.vec3(0, 5.0, -8.0)
-    s["ceiling"].scale = glm.vec3(8.0, 0.1, 7.0)
-    s["ceiling"].kd, s["ceiling"].ks, s["ceiling"].shininess = 0.9, 0.05, 8.0
-    s["ceiling"].boundary = True
+    # Teto (camada dupla para luzes internas e externas)
+    s["ceiling_in"] = GameObject(cube, color=roof)
+    s["ceiling_in"].pos = glm.vec3(0, 4.95, -8.0)
+    s["ceiling_in"].scale = glm.vec3(8.0, 0.05, 7.0)
+    s["ceiling_in"].kd, s["ceiling_in"].ks, s["ceiling_in"].shininess = 1.0, 0.3, 16.0
+    s["ceiling_in"].exterior = False
 
-    # Paredes (boundary: recebem iluminação de ambos os ambientes)
-    walls = {
-        "wall_left":    (glm.vec3(-8.1, 2.5, -8.0), glm.vec3(0.1, 2.5, 7.0)),
-        "wall_right":   (glm.vec3(8.1, 2.5, -8.0),  glm.vec3(0.1, 2.5, 7.0)),
-        "wall_back":    (glm.vec3(0, 2.5, -15.1),   glm.vec3(8.0, 2.5, 0.1)),
-        "wall_front_l": (glm.vec3(-4.35, 2.5, -0.9), glm.vec3(3.65, 2.5, 0.1)),
-        "wall_front_r": (glm.vec3(4.35, 2.5, -0.9),  glm.vec3(3.65, 2.5, 0.1)),
-        "wall_front_t": (glm.vec3(0.0, 4.0, -0.9),   glm.vec3(0.7, 1.0, 0.1)),
+    s["ceiling_out"] = GameObject(cube, color=roof, exterior=True)
+    s["ceiling_out"].pos = glm.vec3(0, 5.05, -8.0)
+    s["ceiling_out"].scale = glm.vec3(8.0, 0.05, 7.0)
+    s["ceiling_out"].kd, s["ceiling_out"].ks, s["ceiling_out"].shininess = 1.0, 0.1, 16.0
+
+    # Paredes: camada interna (luzes internas) e camada externa (luzes externas)
+    walls_in = {
+        "wall_left_in":    (glm.vec3(-8.05, 2.5, -8.0), glm.vec3(0.05, 2.5, 7.0)),
+        "wall_right_in":   (glm.vec3(8.05, 2.5, -8.0),  glm.vec3(0.05, 2.5, 7.0)),
+        "wall_back_in":    (glm.vec3(0, 2.5, -15.05),   glm.vec3(8.0, 2.5, 0.05)),
+        "wall_front_l_in": (glm.vec3(-4.35, 2.5, -0.95), glm.vec3(3.65, 2.5, 0.05)),
+        "wall_front_r_in": (glm.vec3(4.35, 2.5, -0.95),  glm.vec3(3.65, 2.5, 0.05)),
+        "wall_front_t_in": (glm.vec3(0.0, 4.0, -0.95),   glm.vec3(0.7, 1.0, 0.05)),
     }
-    for name, (pos, scale) in walls.items():
+    for name, (pos, scale) in walls_in.items():
         w = GameObject(cube, color=white)
         w.pos, w.scale = pos, scale
-        w.kd, w.ks, w.shininess = 0.9, 0.05, 8.0
-        w.boundary = True
+        w.kd, w.ks, w.shininess = 0.9, 0.4, 32.0
+        w.exterior = False
+        s[name] = w
+
+    walls_out = {
+        "wall_left_out":    (glm.vec3(-8.15, 2.5, -8.0), glm.vec3(0.05, 2.5, 7.0)),
+        "wall_right_out":   (glm.vec3(8.15, 2.5, -8.0),  glm.vec3(0.05, 2.5, 7.0)),
+        "wall_back_out":    (glm.vec3(0, 2.5, -15.15),   glm.vec3(8.0, 2.5, 0.05)),
+        "wall_front_l_out": (glm.vec3(-4.35, 2.5, -0.85), glm.vec3(3.65, 2.5, 0.05)),
+        "wall_front_r_out": (glm.vec3(4.35, 2.5, -0.85),  glm.vec3(3.65, 2.5, 0.05)),
+        "wall_front_t_out": (glm.vec3(0.0, 4.0, -0.85),   glm.vec3(0.7, 1.0, 0.05)),
+    }
+    for name, (pos, scale) in walls_out.items():
+        w = GameObject(cube, color=white, exterior=True)
+        w.pos, w.scale = pos, scale
+        w.kd, w.ks, w.shininess = 0.9, 0.2, 32.0
         s[name] = w
 
     # Chão externo (grama, textura ladrilhada)
     s["floor_outdoor"] = GameObject(plane, model("chao_externo", "chao_externo.jpg"), exterior=True)
     s["floor_outdoor"].pos = glm.vec3(0, -0.02, 0.0)
     s["floor_outdoor"].scale = glm.vec3(100.0, 1.0, 100.0)
-    s["floor_outdoor"].kd, s["floor_outdoor"].ks, s["floor_outdoor"].shininess = 0.9, 0.0, 4.0
+    s["floor_outdoor"].kd, s["floor_outdoor"].ks, s["floor_outdoor"].shininess = 0.9, 0.3, 32.0
     s["floor_outdoor"].tex_scale = 25.0
 
     # Céu
@@ -165,7 +184,8 @@ def build_scene():
     door.pos = glm.vec3(-0.682, -0.1, -0.9)
     door.rot = glm.vec3(-1.5708, 0.0, 0.0)
     door.center = glm.vec3(-45.47, 0.0, 0.0)
-    door.kd, door.ks, door.shininess = 0.8, 0.2, 16.0
+    door.kd, door.ks, door.shininess = 0.8, 0.6, 64.0
+    door.boundary = True
     s["door"] = door
 
     # Professor e chapéu
@@ -243,7 +263,7 @@ def build_scene():
 
     # Carro (externo, com faróis)
     car_obj = GameObject(model("carro", "carro.obj"), model("carro", "carro.png"), exterior=True)
-    car_obj.kd, car_obj.ks, car_obj.shininess = 0.7, 0.9, 64.0
+    car_obj.kd, car_obj.ks, car_obj.shininess = 0.8, 1.5, 128.0
     s["car"] = car_obj
 
     # Esferas dos faróis
@@ -272,7 +292,7 @@ def draw_frame(shader, s, car, camera, state, projection):
     shader.set_float("ambientStrength", state.ambient)
     shader.set_float("globalKd", state.diffuse)
     shader.set_float("globalKs", state.specular)
-    shader.set_float("doorOpen", (state.door_angle / 1.5708) * 0.6)
+    shader.set_float("doorOpen", (state.door_angle / 1.5708) * 0.15)
 
     # Luz 0: faróis do carro (spotlight, externa)
     set_light(shader, 0, car.light_position, CAR_COLOR, state.car_light, True,
@@ -303,9 +323,12 @@ def draw_frame(shader, s, car, camera, state, projection):
     glEnable(GL_DEPTH_TEST)
 
     # Estrutura da sala e ambiente externo
-    for name in ("floor_indoor", "floor_outdoor", "ceiling", "wall_left",
-                 "wall_right", "wall_back", "wall_front_l", "wall_front_r",
-                 "wall_front_t", "door"):
+    for name in ("floor_indoor", "floor_outdoor", "ceiling_in", "ceiling_out",
+                 "wall_left_in", "wall_right_in", "wall_back_in",
+                 "wall_front_l_in", "wall_front_r_in", "wall_front_t_in",
+                 "wall_left_out", "wall_right_out", "wall_back_out",
+                 "wall_front_l_out", "wall_front_r_out", "wall_front_t_out",
+                 "door"):
         s[name].draw(shader)
 
     # Professor e chapéu
