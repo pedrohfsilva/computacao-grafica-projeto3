@@ -11,12 +11,13 @@ out vec2 TexCoord;
 uniform mat4 model;
 uniform mat4 view;
 uniform mat4 projection;
-uniform mat3 normalMatrix;   // inverse-transpose de model (corrige escala não uniforme)
+uniform mat3 normalMatrix;
+uniform float texScale;
 
 void main() {
     vec4 worldPos = model * vec4(aPos, 1.0);
     FragPos = worldPos.xyz;
     Normal = normalMatrix * aNormal;
-    TexCoord = aTexCoord;
+    TexCoord = aTexCoord * texScale;
     gl_Position = projection * view * worldPos;
 }

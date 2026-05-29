@@ -61,13 +61,15 @@ class GameObject:
         self.scale = glm.vec3(1.0)
         self.center = glm.vec3(0.0)   # ponto do modelo posto em 'pos' e eixo de rotação
 
-        # Material de iluminação próprio (requisito 7)
+        # Material
         self.kd = 0.8
         self.ks = 0.3
         self.shininess = 32.0
         self.exterior = exterior
+        self.boundary = False
         self.emission = glm.vec3(0.0)
-        self.unlit = False
+        self.is_sky = False
+        self.tex_scale = 1.0
 
     def model_matrix(self):
         m = glm.translate(glm.mat4(1.0), self.pos)
@@ -88,8 +90,10 @@ class GameObject:
         shader.set_float("matKs", self.ks)
         shader.set_float("matShininess", self.shininess)
         shader.set_vec3("emission", self.emission)
-        shader.set_int("unlit", self.unlit)
+        shader.set_int("isSky", self.is_sky)
         shader.set_int("isExterior", self.exterior)
+        shader.set_int("isBoundary", self.boundary)
+        shader.set_float("texScale", self.tex_scale)
 
         if self.texture:
             shader.set_int("useTexture", True)

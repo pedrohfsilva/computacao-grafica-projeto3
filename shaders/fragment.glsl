@@ -6,83 +6,86 @@ in vec2 TexCoord;
 
 out vec4 FragColor;
 
-// --- Aparência base do objeto ---
 uniform sampler2D textureSampler;
 uniform bool useTexture;
 uniform vec4 solidColor;
 
-// --- Material de iluminação individual (requisito 7) ---
-uniform float matKd;          // coeficiente de reflexão difusa
-uniform float matKs;          // coeficiente de reflexão especular
-uniform float matShininess;   // expoente especular
-uniform vec3  emission;       // emissão própria (fonte de luz "acesa")
-uniform bool  unlit;          // true = cor cheia, sem iluminação (céu)
-uniform bool  isExterior;     // objeto pertence ao ambiente externo
+// Material
+uniform float matKd;
+uniform float matKs;
+uniform float matShininess;
+uniform vec3  emission;
+uniform bool  isSky;
+uniform bool  isExterior;
+uniform bool  isBoundary;
 
-uniform vec3 viewPos;         // posição da câmera (para a especular)
+uniform vec3 viewPos;
 
-// --- Luz ambiente global (liga/desliga e intensidade) ---
+// Luz ambiente global
 uniform bool  ambientOn;
 uniform float ambientStrength;
+uniform float doorOpen;
 
-// --- Multiplicadores globais de reflexão (teclado) ---
+// Multiplicadores globais de reflexão
 uniform float globalKd;
 uniform float globalKs;
 
-// --- Fontes de luz: 0=carro (spot, externa), 1=lâmpada, 2=celular (internas) ---
+// Fontes de luz: 0=carro (spot, externa), 1=lâmpada, 2=celular (internas)
 #define NUM_LIGHTS 3
 struct Light {
     vec3  position;
     vec3  color;
-    vec3  direction;     // direção do facho (spotlight)
-    float cutoff;        // cosseno do cone interno; < 0 => luz pontual
-    float outerCutoff;   // cosseno do cone externo (borda suave)
-    float linear;        // atenuação por distância
+    vec3  direction;
+    float cutoff;
+    float outerCutoff;
+    float linear;
     float quadratic;
     bool  enabled;
-    bool  isExterior;    // escopo: só ilumina objetos do mesmo ambiente
+    bool  isExterior;
 };
 uniform Light lights[NUM_LIGHTS];
 
 void main() {
     vec4 base = useTexture ? texture(textureSampler, TexCoord) : solidColor;
-    if (base.a < 0.1)            // descarta pixels transparentes
+    if (base.a < 0.1)
         discard;
     vec3 color = base.rgb;
 
-    // Céu sempre claro: renderizado com cor cheia, sem sombreamento.
-    if (unlit) {
-        FragColor = vec4(color, base.a);
+    // Ambiente: exterior e paredes recebem 100%; sala depende da porta
+    float ambientFactor = (isExterior || isBoundary) ? 1.0 : doorOpen;
+    vec3 ambient = ambientOn ? ambientStrength * ambientFactor * color : vec3(0.0);
+
+    // Céu: só luz ambiente
+    if (isSky) {
+        FragColor = vec4(ambient, base.a);
         return;
     }
 
     vec3 norm = normalize(Normal);
     vec3 viewDir = normalize(viewPos - FragPos);
 
-    vec3 ambient = ambientOn ? ambientStrength * color : vec3(0.0);
     vec3 diffuse = vec3(0.0);
     vec3 specular = vec3(0.0);
 
     for (int i = 0; i < NUM_LIGHTS; i++) {
-        // A luz só afeta objetos do mesmo ambiente (interno x externo).
-        if (!lights[i].enabled || lights[i].isExterior != isExterior)
+        // Boundary recebe luz de ambos os ambientes; demais só do seu escopo
+        if (!lights[i].enabled || (!isBoundary && lights[i].isExterior != isExterior))
             continue;
 
-        // Sentido da luz a partir da posição relativa luz/superfície.
         vec3 lightDir = normalize(lights[i].position - FragPos);
 
-        // Reflexão difusa (Lambert).
+        // Difusa (Lambert)
         float diff = max(dot(norm, lightDir), 0.0);
 
-        // Reflexão especular (Phong).
+        // Especular (Phong)
         vec3 reflectDir = reflect(-lightDir, norm);
         float spec = pow(max(dot(viewDir, reflectDir), 0.0), matShininess);
 
-        // Atenuação por distância.
+        // Atenuação
         float dist = length(lights[i].position - FragPos);
         float att = 1.0 / (1.0 + lights[i].linear * dist + lights[i].quadratic * dist * dist);
 
-        // Facho (spotlight): intensidade cai entre o cone interno e o externo.
+        // Spotlight
         float spot = 1.0;
         if (lights[i].cutoff >= 0.0) {
             float theta = dot(lightDir, normalize(-lights[i].direction));
