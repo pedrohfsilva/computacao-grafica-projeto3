@@ -10,14 +10,15 @@ uniform sampler2D textureSampler;
 uniform bool useTexture;
 uniform vec4 solidColor;
 
-// Material
-uniform float matKd;
-uniform float matKs;
-uniform float matShininess;
-uniform vec3  emission;
-uniform bool  isSky;
-uniform bool  isExterior;
-uniform bool  isBoundary;
+// Material próprio de cada objeto (requisito 7: nada vem de .mtl)
+uniform float matKd;          // reflexão difusa
+uniform float matKs;          // reflexão especular
+uniform float matShininess;   // expoente especular
+uniform vec3  emission;       // emissão própria (fonte de luz acesa)
+// Escopo do objeto na cena
+uniform bool  isSky;          // céu: iluminado só pela luz ambiente
+uniform bool  isExterior;     // pertence ao ambiente externo
+uniform bool  isBoundary;     // porta: fronteira entre os dois ambientes
 
 uniform vec3 viewPos;
 
@@ -52,8 +53,8 @@ void main() {
     vec3 color = base.rgb;
 
     vec3 norm = normalize(Normal);
-    
-    // Ambiente: exterior recebe 100%; sala depende da porta
+
+    // Ambiente: exterior recebe 100%; sala (fechada) depende da abertura da porta
     float ambientFactor;
     if (isBoundary) {
         // A porta gira de Z+ (fechada) para X+ (aberta). 
@@ -82,12 +83,12 @@ void main() {
 
         vec3 lightDir = normalize(lights[i].position - FragPos);
 
-        // Difusa (Lambert)
+        // Difusa (Lambert): depende do ângulo entre a normal e o sentido da luz
         float diff = max(dot(norm, lightDir), 0.0);
 
-        // Especular (Blinn-Phong)
+        // Especular (Blinn-Phong): só onde a superfície está voltada para a luz
         vec3 halfwayDir = normalize(lightDir + viewDir);
-        float spec = pow(max(dot(norm, halfwayDir), 0.0), matShininess);
+        float spec = diff > 0.0 ? pow(max(dot(norm, halfwayDir), 0.0), matShininess) : 0.0;
 
         // Atenuação
         float dist = length(lights[i].position - FragPos);

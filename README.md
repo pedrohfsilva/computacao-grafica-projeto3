@@ -20,7 +20,7 @@ Uma **sala de aula durante uma greve universitária**, com dois ambientes conect
 - Oito grevistas, um guarda na porta e uma caixa de som.
 - Barricada de cadeiras bloqueando a entrada.
 - Um **carro com faróis** que pode ser dirigido pelo teclado.
-- Céu (skybox) sempre claro, pois é dia.
+- Céu (skybox) iluminado pela luz ambiente (fica mais claro ou mais escuro com ela).
 
 ## Iluminação
 
@@ -44,8 +44,11 @@ Como os requisitos são atendidos:
 7. **Parâmetros individuais** — cada objeto define seus próprios `kd`, `ks` e brilho no código
    (nenhum parâmetro vem de arquivos `.mtl`).
 
-O escopo interno/externo é feito no fragment shader: cada luz só ilumina objetos do mesmo
-ambiente. O céu é desenhado sem iluminação (sempre claro).
+Detalhes de escopo (no fragment shader):
+- Cada luz só ilumina objetos do seu ambiente (a do carro, o externo; lâmpada e celular, o interno).
+- O céu recebe apenas a luz ambiente, então clareia ou escurece conforme ela.
+- A sala é fechada: o interior **não** recebe a luz ambiente, só as luzes internas. Ao abrir
+  a porta, um pouco de ambiente entra (proporcional à abertura).
 
 ## Pré-requisitos
 
@@ -116,11 +119,10 @@ Trabalho 3 CG/
 │   └── fragment.glsl  # Fragment shader (iluminação de Phong)
 ├── modelos/           # Modelos .obj e texturas
 │   ├── primitivas/    # cubo, plano, esfera
+│   ├── chao_interno/  chao_externo/  skybox/
 │   ├── aluno/  cadeira/  caixa_som/  carro/  chapeu/
 │   ├── grevista1/  grevista2/  guarda/  lampada/  mesa/
-│   ├── porta/  professor/  smartphone/  skybox/
-│   └── ...
+│   └── porta/  professor/  smartphone/
 ├── requirements.txt
 └── README.md
 ```
-# computacao-grafica-projeto3

@@ -61,15 +61,16 @@ class GameObject:
         self.scale = glm.vec3(1.0)
         self.center = glm.vec3(0.0)   # ponto do modelo posto em 'pos' e eixo de rotação
 
-        # Material
-        self.kd = 0.8
-        self.ks = 0.3
-        self.shininess = 32.0
-        self.exterior = exterior
-        self.boundary = False
-        self.emission = glm.vec3(0.0)
-        self.is_sky = False
-        self.tex_scale = 1.0
+        # Material de iluminação próprio (requisito 7)
+        self.kd = 0.8                  # reflexão difusa
+        self.ks = 0.3                  # reflexão especular
+        self.shininess = 32.0          # expoente especular
+        self.emission = glm.vec3(0.0)  # brilho próprio (fonte de luz acesa)
+        # Escopo de iluminação
+        self.exterior = exterior       # recebe luz/ambiente do ambiente externo
+        self.boundary = False          # porta: fronteira entre os ambientes
+        self.is_sky = False            # céu: iluminado só pela luz ambiente
+        self.tex_scale = 1.0           # repetição (ladrilho) da textura
 
     def model_matrix(self):
         m = glm.translate(glm.mat4(1.0), self.pos)
